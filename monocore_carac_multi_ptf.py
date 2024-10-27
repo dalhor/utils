@@ -41,6 +41,8 @@ TH_PROG_USAGE= "python monocore_carac_multi_ptf.py -i <JSON_results_folder> -o <
 
 nano_to_milli = 0.000001
 
+color_list = ["#B2B0EA", "#F4B678"]
+
 def command_print_usage():
     print(TH_PROG_USAGE)
 
@@ -71,6 +73,8 @@ def main_get_options(argv):
             is_valid_o = True
     return is_valid_i and is_valid_o, JSON_results_folder, pictures_folder
 
+dataframe_count = 0
+
 if __name__ == "__main__":
     # Récupérer les arguments de ligne de commande
     is_valid, JSON_results_folder, pictures_folder = main_get_options(sys.argv[1:])
@@ -83,9 +87,6 @@ if __name__ == "__main__":
     # Dictionnaire pour stocker chaque DataFrame par nom de fichier
     dataframes = {}
     previous_df = None
-
-    merged_dataframes_columns = ['core0AppElfId']
-    merged_dataframes = pd.DataFrame(columns=merged_dataframes_columns)
 
     # Lire chaque fichier CSV commençant par 'TH40_' dans le dossier spécifié
     for filename in os.listdir(JSON_results_folder):
@@ -191,27 +192,23 @@ if __name__ == "__main__":
             print(merged_df.head())
         previous_df = dataframe
 
+        dataframe_count = dataframe_count + 1
 
     # Initialize the subplots with a single row for the chart and the table
     fig = sp.make_subplots(
         rows=1, cols=2,
         specs=[[{"type": "bar"}, {"type": "table"}]],  # Bar chart in the first column, table in the second
     )
-
-    # Add bar charts in the first subplot
-    fig.add_trace(go.Bar(
-        x=merged_df['core0AppElfId'],
-        y=merged_df.iloc[:, 1],
-        marker=dict(color='#B2B0EA'),
-        name=merged_df.columns[1]
-    ), row=1, col=1)
-
-    fig.add_trace(go.Bar(
-        x=merged_df['core0AppElfId'],
-        y=merged_df.iloc[:, 2],
-        marker=dict(color='#F4B678'),
-        name=merged_df.columns[2]
-    ), row=1, col=1)
+    # Add bar charts recursively through dataframe dataframe_count
+    i = 0
+    while i < dataframe_count :
+        fig.add_trace(go.Bar(
+            x=merged_df['core0AppElfId'],
+            y=merged_df.iloc[:, i+1],
+            marker=dict(color=color_list[i]),
+            name=merged_df.columns[i+1]
+        ), row=1, col=1)
+        i = i + 1
 
     # Create the table in the second subplot
     fig.add_trace(
@@ -233,7 +230,7 @@ if __name__ == "__main__":
         row=1, col=2
     )
 
-    # Add an annotation for the table title
+    # Annotation for the table title
     fig.add_annotation(
         text="<b>Measurement Value for each platform (in ms)</b>", 
         font=dict(
@@ -254,7 +251,6 @@ if __name__ == "__main__":
             size=24,
             color='#8A8D90'
         ),
-        xaxis_title='Application IDs',
         yaxis_title='Time Execution (in ms)',
         legend=dict(
             yanchor="top",
