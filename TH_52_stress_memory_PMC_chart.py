@@ -160,7 +160,7 @@ if __name__ == "__main__":
         # Update the axes for each subplot with custom labels
         fig.update_xaxes(title_text="Application", row=i+1, col=1)
         fig.update_yaxes(title_text="Average Evt Count", row=i+1, col=1, tickformat='.2f')
-
+        
     # Global formatting of the chart
     fig.update_layout(
         height=500 * len(evt_names), 

@@ -25,6 +25,7 @@ import plotly.figure_factory as ff
 import plotly.express as px
 
 from plotly.subplots import make_subplots
+import plotly.subplots as sp
 
 from IPython.display import display
 
@@ -173,7 +174,7 @@ if __name__ == "__main__":
                     .reset_index() # Original columns were squished by groupby so reset_index unsquishes them
 
         dataframe["mean_value"] = dataframe["mean_value"] * nano_to_milli * config["ticker_period"]
-
+        dataframe["mean_value"] = dataframe["mean_value"].astype(float).round(2)
         # Separate dataframe into ref_dataframe with only core0 active and dataframe with both core actives
         dataframe = dataframe[dataframe["core1AppId"] == 0]
 
@@ -190,33 +191,86 @@ if __name__ == "__main__":
             print(merged_df.head())
         previous_df = dataframe
 
-    # # Initialize a figure with ff.create_table(table_data)
-    colorscale = [[0, '#4d004c'],[.5, '#f2e5ff'],[1, '#ffffff']]
-    fig = ff.create_table(merged_df, colorscale=colorscale)
 
-    fig.add_trace(go.Bar(x=merged_df['core0AppElfId'], y=merged_df.iloc[:, 1], xaxis='x2', yaxis='y2',
-                marker=dict(color='#ff6b33'),
-                name=merged_df.columns[1]))
-
-    fig.add_trace(go.Bar(x=merged_df['core0AppElfId'], y=merged_df.iloc[:, 2], xaxis='x2', yaxis='y2',
-                    marker=dict(color='#99d15e'),
-                    name=merged_df.columns[2]))
-    
-    fig.update_layout(
-        title_text = 'Multi Platform Comparison on monocore carac algorithm',
-        height = 600,
-        width = 800,
-        margin = {'t':75, 'l':50},
-        yaxis = {'domain': [0, .45]},
-        xaxis2 = {'anchor': 'y2'},
-        yaxis2 = {'domain': [.6, 1], 'anchor': 'x2', 'title': 'Time Execution (in ms)'}
+    # Initialize the subplots with a single row for the chart and the table
+    fig = sp.make_subplots(
+        rows=1, cols=2,
+        specs=[[{"type": "bar"}, {"type": "table"}]],  # Bar chart in the first column, table in the second
     )
+
+    # Add bar charts in the first subplot
+    fig.add_trace(go.Bar(
+        x=merged_df['core0AppElfId'],
+        y=merged_df.iloc[:, 1],
+        marker=dict(color='#B2B0EA'),
+        name=merged_df.columns[1]
+    ), row=1, col=1)
+
+    fig.add_trace(go.Bar(
+        x=merged_df['core0AppElfId'],
+        y=merged_df.iloc[:, 2],
+        marker=dict(color='#F4B678'),
+        name=merged_df.columns[2]
+    ), row=1, col=1)
+
+    # Create the table in the second subplot
+    fig.add_trace(
+        go.Table(
+            header=dict(
+                values=merged_df.columns,
+                fill_color='#4d004c',
+                font=dict(color='white', size=12),
+            ),
+            cells=dict(
+                values=[merged_df[col] for col in merged_df.columns],
+                fill_color=[
+                    ['#f2e5ff' if row % 2 == 0 else '#ffffff' for row in range(len(merged_df))]
+                    for _ in range(len(merged_df.columns))
+                ],
+                align='center'
+            )
+        ),
+        row=1, col=2
+    )
+
+    # Add an annotation for the table title
+    fig.add_annotation(
+        text="<b>Measurement Value for each platform (in ms)</b>", 
+        font=dict(
+            family='Courier New',
+            size=16, 
+            color='#8A8D90'
+        ),
+        xref="paper", yref="paper",
+        x=0.95, y=1.05,
+        showarrow=False
+    )
+
+    # Update layout parameters
+    fig.update_layout(
+        title_text='<b>MULTI PLATFORM COMPARISON</b>',
+        title_font=dict(
+            family='Courier New',
+            size=24,
+            color='#8A8D90'
+        ),
+        xaxis_title='Application IDs',
+        yaxis_title='Time Execution (in ms)',
+        legend=dict(
+            yanchor="top",
+            xanchor="left",
+            x=0.0
+        )
+    )
+
+    # Generate the HTML content for the complete figure
     html_content = fig.to_html(full_html=True, include_plotlyjs='cdn')
     html_content = html_content.replace(
         '<head>',
-        '<head><style>body { display: flex; justify-content: center; margin: 0; }</style>'
+        '<head><style>'
+        'body .plotly .plot-title { background-color: #D2D2D2; padding: 10px; border-radius: 5px; font-weight: bold; text-align: center; }'
+        '</style>'
     )
-    # fig.write_html(pictures_folder + '/' + CHART_HTML_FNAME)
-    # # Write html content 
+
     with open(pictures_folder + '/' + CHART_HTML_FNAME, 'w') as f:
         f.write(html_content)
